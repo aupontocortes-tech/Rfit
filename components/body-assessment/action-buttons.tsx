@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Download, Share2, Printer, Save } from "lucide-react";
+import { Download, Share2, Printer, Save, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { downloadPDF, sharePDF, printPDF } from "@/lib/pdf-generator";
+import { downloadPDF, sharePDF, printPDF, viewPDF } from "@/lib/pdf-generator";
 import type { AssessmentData } from "@/lib/body-assessment-types";
 import { toast } from "sonner";
 
@@ -16,6 +16,13 @@ export function ActionButtons({ data }: ActionButtonsProps) {
 
   const handleDownload = () => {
     downloadPDF(data);
+  };
+
+  const handleVisualizar = () => {
+    const ok = viewPDF(data);
+    if (!ok) {
+      toast.error("Não foi possível abrir o PDF. Permita pop-ups neste site ou use Gerar PDF.");
+    }
   };
 
   const handleShare = () => {
@@ -57,6 +64,14 @@ export function ActionButtons({ data }: ActionButtonsProps) {
       >
         <Save className="w-4 h-4 mr-2" />
         {salvando ? "Salvando…" : "Salvar"}
+      </Button>
+      <Button
+        onClick={handleVisualizar}
+        className="flex-1 min-w-[120px]"
+        variant="outline"
+      >
+        <Eye className="w-4 h-4 mr-2" />
+        Visualizar PDF
       </Button>
       <Button 
         onClick={handleDownload}

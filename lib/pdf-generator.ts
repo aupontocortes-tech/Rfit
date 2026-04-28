@@ -553,6 +553,20 @@ export function downloadPDF(data: AssessmentData): void {
   doc.save(fileName);
 }
 
+/** Abre o PDF em nova aba para visualização (blob URL). Retorna false se o pop-up foi bloqueado. */
+export function viewPDF(data: AssessmentData): boolean {
+  const doc = generatePDF(data);
+  const blob = doc.output("blob");
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, "_blank", "noopener,noreferrer");
+  if (!win) {
+    URL.revokeObjectURL(url);
+    return false;
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 600_000);
+  return true;
+}
+
 export function sharePDF(data: AssessmentData): void {
   const doc = generatePDF(data);
   const pdfBlob = doc.output("blob");
