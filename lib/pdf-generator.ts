@@ -11,126 +11,172 @@ function textRight(doc: jsPDF, str: string, xRight: number, y: number) {
   doc.text(str, xRight, y, { align: "right" });
 }
 
-// Draws a high-quality pie chart on a hidden <canvas> and returns its PNG data URL
-function criarImagemGraficoPizza(
+/** Desenha um gráfico de pizza 3D diretamente no jsPDF (sem canvas) */
+function desenharGrafico3D(
+  doc: jsPDF,
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  depth: number,
+  percentualGordura: number,
   massaMagra: number,
   massaGorda: number,
-  percentualGordura: number
-): string {
-  const scale = 3;
-  const W = 320,
-    H = 220;
-  const canvas = document.createElement("canvas");
-  canvas.width = W * scale;
-  canvas.height = H * scale;
-  const ctx = canvas.getContext("2d")!;
-  ctx.scale(scale, scale);
-
-  ctx.clearRect(0, 0, W, H);
-
-  const cx = 100,
-    cy = 105,
-    r = 82;
+  green: [number, number, number],
+  orange: [number, number, number],
+  black: [number, number, number],
+  gray: [number, number, number]
+) {
   const percentualMagra = 100 - percentualGordura;
 
-  const startMagra = -Math.PI / 2;
-  const endMagra = startMagra + (percentualMagra / 100) * 2 * Math.PI;
+  // Converte ângulo (0° = topo) para radianos do SVG/canvas
+  const toRad = (angle: number) => (angle - 90) * (Math.PI / 180);
 
-  const gradMagra = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.2, 0, cx, cy, r);
-  gradMagra.addColorStop(0, "#86efac");
-  gradMagra.addColorStop(1, "#15803d");
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.arc(cx, cy, r, startMagra, endMagra);
-  ctx.closePath();
-  ctx.fillStyle = gradMagra;
-  ctx.fill();
-  ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  const pt = (angle: number, rxi = rx, ryi = ry) => ({
+    x: cx + rxi * Math.cos(toRad(angle)),
+    y: cy + ryi * Math.sin(toRad(angle)),
+  });
 
-  const gradGorda = ctx.createRadialGradient(cx + r * 0.2, cy - r * 0.2, 0, cx, cy, r);
-  gradGorda.addColorStop(0, "#fde68a");
-  gradGorda.addColorStop(1, "#b45309");
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.arc(cx, cy, r, endMagra, startMagra + 2 * Math.PI);
-  ctx.closePath();
-  ctx.fillStyle = gradGorda;
-  ctx.fill();
-  ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  const endAngleMagra = (percentualMagra / 100) * 360;
 
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  // ── Sombra base ──────────────────────────────────────────────
+  doc.setFillColor(200, 200, 200);
+  doc.setDrawColor(200, 200, 200);
+  doc.ellipse(cx, cy + depth + 2, rx * 0.98, ry * 0.35, "F");
 
-  if (percentualMagra > 6) {
-    const midMagra = startMagra + (percentualMagra / 100) * Math.PI;
-    const lx = cx + r * 0.6 * Math.cos(midMagra);
-    const ly = cy + r * 0.6 * Math.sin(midMagra);
-    ctx.font = `bold 13px Arial`;
-    ctx.fillStyle = "#fff";
-    ctx.shadowColor = "rgba(0,0,0,0.5)";
-    ctx.shadowBlur = 3;
-    ctx.fillText(`${percentualMagra.toFixed(1)}%`, lx, ly);
-    ctx.shadowBlur = 0;
+  // ── Parede 3D (espessura) – apenas arco frontal (90° a 270°) ──
+  const wallSegs = [
+    { start: Math.max(0, 90),        end: Math.min(endAngleMagra, 270),  color: [21, 128, 61]  as [number,number,number] },
+    { start: Math.max(endAngleMagra, 90), end: 270,                       color: [161, 98, 7]   as [number,number,number] },
+  ];
+
+  for (const seg of wallSegs) {
+    if (seg.start >= seg.end) continue;
+    const steps = Math.ceil((seg.end - seg.start) / 6);
+    for (let i = 0; i < steps; i++) {
+      const a1 = seg.start + (seg.end - seg.start) * (i / steps);
+      const a2 = seg.start + (seg.end - seg.start) * ((i + 1) / steps);
+      const p1 = pt(a1);
+      const p2 = pt(a2);
+      const darkness = 0.6 + 0.4 * ((a2 - 90) / 180);
+      doc.setFillColor(
+        Math.round(seg.color[0] * darkness),
+        Math.round(seg.color[1] * darkness),
+        Math.round(seg.color[2] * darkness)
+      );
+      doc.setDrawColor(seg.color[0], seg.color[1], seg.color[2]);
+      doc.lines(
+        [
+          [p2.x - p1.x, p2.y - p1.y],
+          [0, depth],
+          [p1.x - p2.x, 0],
+          [0, -depth],
+        ],
+        p1.x, p1.y, [1, 1], "F", true
+      );
+    }
   }
 
+  // ── Fatia Massa Magra (verde) ───────────────────────────────
+  doc.setFillColor(...green);
+  doc.setDrawColor(255, 255, 255);
+  doc.setLineWidth(0.4);
+  {
+    const steps = Math.max(60, Math.ceil(endAngleMagra / 3));
+    const pts: [number, number][] = [[cx, cy]];
+    for (let i = 0; i <= steps; i++) {
+      const angle = (endAngleMagra * i) / steps;
+      const p = pt(angle);
+      pts.push([p.x, p.y]);
+    }
+    pts.push([cx, cy]);
+    doc.setFillColor(...green);
+    doc.lines(
+      pts.slice(1).map((p, idx) => [p[0] - pts[idx][0], p[1] - pts[idx][1]] as [number, number]),
+      pts[0][0], pts[0][1], [1, 1], "FD", true
+    );
+  }
+
+  // ── Fatia Massa Gorda (laranja) ─────────────────────────────
+  {
+    const steps = Math.max(60, Math.ceil((360 - endAngleMagra) / 3));
+    const pts: [number, number][] = [[cx, cy]];
+    for (let i = 0; i <= steps; i++) {
+      const angle = endAngleMagra + ((360 - endAngleMagra) * i) / steps;
+      const p = pt(angle);
+      pts.push([p.x, p.y]);
+    }
+    pts.push([cx, cy]);
+    doc.setFillColor(...orange);
+    doc.lines(
+      pts.slice(1).map((p, idx) => [p[0] - pts[idx][0], p[1] - pts[idx][1]] as [number, number]),
+      pts[0][0], pts[0][1], [1, 1], "FD", true
+    );
+  }
+
+  // ── Borda do contorno da elipse ──────────────────────────────
+  doc.setDrawColor(255, 255, 255);
+  doc.setLineWidth(0.5);
+  doc.ellipse(cx, cy, rx, ry, "S");
+
+  // ── Labels percentuais dentro das fatias ─────────────────────
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+
+  if (percentualMagra > 5) {
+    const midMagra = endAngleMagra / 2;
+    const lp = pt(midMagra, rx * 0.58, ry * 0.58);
+    doc.text(`${percentualMagra.toFixed(1)}%`, lp.x, lp.y, { align: "center", baseline: "middle" });
+  }
   if (percentualGordura > 4) {
-    const midGorda = endMagra + ((100 - percentualMagra) / 100) * Math.PI;
-    const lx = cx + r * 0.6 * Math.cos(midGorda);
-    const ly = cy + r * 0.6 * Math.sin(midGorda);
-    ctx.font = `bold 13px Arial`;
-    ctx.fillStyle = "#fff";
-    ctx.shadowColor = "rgba(0,0,0,0.5)";
-    ctx.shadowBlur = 3;
-    ctx.fillText(`${percentualGordura.toFixed(1)}%`, lx, ly);
-    ctx.shadowBlur = 0;
+    const midGorda = endAngleMagra + (360 - endAngleMagra) / 2;
+    const lp = pt(midGorda, rx * 0.58, ry * 0.58);
+    doc.text(`${percentualGordura.toFixed(1)}%`, lp.x, lp.y, { align: "center", baseline: "middle" });
   }
 
-  const lx = 200,
-    ly0 = 72;
-  ctx.textAlign = "left";
-  ctx.shadowBlur = 0;
+  // ── Legenda ──────────────────────────────────────────────────
+  const legX = cx + rx + 5;
+  const legY = cy - 10;
 
-  ctx.fillStyle = "#22c55e";
-  roundRect(ctx, lx, ly0, 14, 14, 3);
-  ctx.font = "bold 11px Arial";
-  ctx.fillStyle = "#1e1e1e";
-  ctx.fillText("Massa Magra", lx + 18, ly0 + 7);
-  ctx.font = "11px Arial";
-  ctx.fillStyle = "#555555";
-  ctx.fillText(`${massaMagra.toFixed(2)} kg`, lx + 18, ly0 + 22);
+  doc.setFillColor(...green);
+  doc.rect(legX, legY, 5, 5, "F");
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...black);
+  doc.text("Massa Magra", legX + 7, legY + 4);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...gray);
+  doc.text(`${massaMagra.toFixed(2)} kg`, legX + 7, legY + 9);
 
-  ctx.fillStyle = "#f59e0b";
-  roundRect(ctx, lx, ly0 + 42, 14, 14, 3);
-  ctx.font = "bold 11px Arial";
-  ctx.fillStyle = "#1e1e1e";
-  ctx.fillText("Massa Gorda", lx + 18, ly0 + 49);
-  ctx.font = "11px Arial";
-  ctx.fillStyle = "#555555";
-  ctx.fillText(`${massaGorda.toFixed(2)} kg`, lx + 18, ly0 + 64);
-
-  return canvas.toDataURL("image/png");
+  doc.setFillColor(...orange);
+  doc.rect(legX, legY + 14, 5, 5, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...black);
+  doc.text("Massa Gorda", legX + 7, legY + 18);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...gray);
+  doc.text(`${massaGorda.toFixed(2)} kg`, legX + 7, legY + 23);
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-  ctx.fill();
+async function fetchLogoDataUrl(): Promise<string | null> {
+  try {
+    const res = await fetch("/logo-raquel.png");
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
 }
 
-export function generatePDF(data: AssessmentData): jsPDF {
+export async function generatePDF(data: AssessmentData): Promise<jsPDF> {
+  const logoDataUrl = await fetchLogoDataUrl();
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -505,20 +551,41 @@ export function generatePDF(data: AssessmentData): jsPDF {
 
   yLeft += 3;
 
-  // Gráfico – largura = coluna esquerda
+  // ── Gráfico de pizza 3D (nativo jsPDF) ─────────────────────
   if (data.resultados) {
+    const orange: [number, number, number] = [230, 130, 20];
+    const chartCX = colLeftX + colLeftW * 0.42;
+    const chartCY = yLeft + 22;
+    const chartRX = colLeftW * 0.34;
+    const chartRY = colLeftW * 0.20;
+    const chartDepth = 8;
+
+    desenharGrafico3D(
+      doc,
+      chartCX, chartCY,
+      chartRX, chartRY, chartDepth,
+      data.resultados.percentualGordura,
+      data.resultados.massaMagra,
+      data.resultados.massaGorda,
+      green, orange, black, gray
+    );
+
+    yLeft = chartCY + chartRY + chartDepth + 18;
+  }
+
+  // ── Marca d'água (logo Raquel Lins) centrada na coluna esquerda ──
+  if (logoDataUrl) {
     try {
-      const chartImgData = criarImagemGraficoPizza(
-        data.resultados.massaMagra,
-        data.resultados.massaGorda,
-        data.resultados.percentualGordura
-      );
-      const chartW = colLeftW;
-      const chartH = chartW * (220 / 320);
-      doc.addImage(chartImgData, "PNG", colLeftX, yLeft, chartW, chartH);
-      yLeft += chartH + 4;
+      const logoW = colLeftW * 0.55;
+      const logoH = logoW * 1.32;
+      const logoX = colLeftX + (colLeftW - logoW) / 2;
+      const logoY = yLeft + 2;
+      doc.saveGraphicsState();
+      doc.setGState(doc.GState({ opacity: 0.08 }));
+      doc.addImage(logoDataUrl, "PNG", logoX, logoY, logoW, logoH);
+      doc.restoreGraphicsState();
     } catch {
-      // canvas indisponível
+      // logo indisponível
     }
   }
 
@@ -547,15 +614,15 @@ export function generatePDF(data: AssessmentData): jsPDF {
   return doc;
 }
 
-export function downloadPDF(data: AssessmentData): void {
-  const doc = generatePDF(data);
+export async function downloadPDF(data: AssessmentData): Promise<void> {
+  const doc = await generatePDF(data);
   const fileName = `rfit_${data.cliente.nome.replace(/\s+/g, "_")}_${data.cliente.dataAvaliacao.replace(/\//g, "-")}.pdf`;
   doc.save(fileName);
 }
 
 /** Abre o PDF em nova aba para visualização (blob URL). Retorna false se o pop-up foi bloqueado. */
-export function viewPDF(data: AssessmentData): boolean {
-  const doc = generatePDF(data);
+export async function viewPDF(data: AssessmentData): Promise<boolean> {
+  const doc = await generatePDF(data);
   const blob = doc.output("blob");
   const url = URL.createObjectURL(blob);
   const win = window.open(url, "_blank", "noopener,noreferrer");
@@ -567,8 +634,8 @@ export function viewPDF(data: AssessmentData): boolean {
   return true;
 }
 
-export function sharePDF(data: AssessmentData): void {
-  const doc = generatePDF(data);
+export async function sharePDF(data: AssessmentData): Promise<void> {
+  const doc = await generatePDF(data);
   const pdfBlob = doc.output("blob");
 
   if (navigator.share && navigator.canShare) {
@@ -579,12 +646,12 @@ export function sharePDF(data: AssessmentData): void {
       text: `Avaliação Corporal de ${data.cliente.nome}`,
     }).catch(console.error);
   } else {
-    downloadPDF(data);
+    await downloadPDF(data);
   }
 }
 
-export function printPDF(data: AssessmentData): void {
-  const doc = generatePDF(data);
+export async function printPDF(data: AssessmentData): Promise<void> {
+  const doc = await generatePDF(data);
   const pdfDataUri = doc.output("datauristring");
   const printWindow = window.open(pdfDataUri);
   if (printWindow) {

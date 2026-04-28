@@ -14,23 +14,23 @@ interface ActionButtonsProps {
 export function ActionButtons({ data }: ActionButtonsProps) {
   const [salvando, setSalvando] = useState(false);
 
-  const handleDownload = () => {
-    downloadPDF(data);
+  const handleDownload = async () => {
+    await downloadPDF(data);
   };
 
-  const handleVisualizar = () => {
-    const ok = viewPDF(data);
+  const handleVisualizar = async () => {
+    const ok = await viewPDF(data);
     if (!ok) {
       toast.error("Não foi possível abrir o PDF. Permita pop-ups neste site ou use Gerar PDF.");
     }
   };
 
-  const handleShare = () => {
-    sharePDF(data);
+  const handleShare = async () => {
+    await sharePDF(data);
   };
 
-  const handlePrint = () => {
-    printPDF(data);
+  const handlePrint = async () => {
+    await printPDF(data);
   };
 
   const handleSalvar = async () => {
