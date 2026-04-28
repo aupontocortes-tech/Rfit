@@ -159,147 +159,7 @@ function desenharGrafico3D(
   doc.text(`${massaGorda.toFixed(2)} kg`, legX + 7, legY + 23);
 }
 
-async function fetchLogoDataUrl(): Promise<string | null> {
-  try {
-    const res = await fetch("/logo-raquel.png");
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
-}
-
-/** Remove fundo preto ligado à borda (flood-fill) e recorta ao conteúdo — evita retângulo cinza no PDF. */
-function processLogoForWatermark(srcDataUrl: string): Promise<{ dataUrl: string; aspect: number } | null> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      try {
-        const W = img.naturalWidth;
-        const H = img.naturalHeight;
-        if (!W || !H) {
-          resolve(null);
-          return;
-        }
-
-        const canvas = document.createElement("canvas");
-        canvas.width = W;
-        canvas.height = H;
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        if (!ctx) {
-          resolve(null);
-          return;
-        }
-        ctx.drawImage(img, 0, 0);
-        const im = ctx.getImageData(0, 0, W, H);
-        const p = im.data;
-        const darkThresh = 52;
-
-        const isDarkAt = (px: number) => {
-          const r = p[px],
-            g = p[px + 1],
-            b = p[px + 2];
-          return Math.max(r, g, b) < darkThresh;
-        };
-
-        const seen = new Uint8Array(W * H);
-        const stack: number[] = [];
-        const push = (x: number, y: number) => {
-          if (x < 0 || y < 0 || x >= W || y >= H) return;
-          const idx = y * W + x;
-          if (seen[idx]) return;
-          const px = idx * 4;
-          if (!isDarkAt(px)) return;
-          seen[idx] = 1;
-          stack.push(idx);
-        };
-
-        for (let x = 0; x < W; x++) {
-          push(x, 0);
-          push(x, H - 1);
-        }
-        for (let y = 0; y < H; y++) {
-          push(0, y);
-          push(W - 1, y);
-        }
-
-        while (stack.length) {
-          const idx = stack.pop()!;
-          const x = idx % W;
-          const y = (idx / W) | 0;
-          push(x + 1, y);
-          push(x - 1, y);
-          push(x, y + 1);
-          push(x, y - 1);
-        }
-
-        for (let idx = 0; idx < W * H; idx++) {
-          if (!seen[idx]) continue;
-          p[idx * 4 + 3] = 0;
-        }
-
-        ctx.putImageData(im, 0, 0);
-
-        const im2 = ctx.getImageData(0, 0, W, H);
-        const p2 = im2.data;
-        let minX = W,
-          minY = H,
-          maxX = -1,
-          maxY = -1;
-        for (let y = 0; y < H; y++) {
-          for (let x = 0; x < W; x++) {
-            if (p2[(y * W + x) * 4 + 3] > 12) {
-              if (x < minX) minX = x;
-              if (x > maxX) maxX = x;
-              if (y < minY) minY = y;
-              if (y > maxY) maxY = y;
-            }
-          }
-        }
-        if (maxX < minX) {
-          resolve(null);
-          return;
-        }
-
-        const pad = Math.max(2, Math.round(Math.min(W, H) * 0.012));
-        minX = Math.max(0, minX - pad);
-        minY = Math.max(0, minY - pad);
-        maxX = Math.min(W - 1, maxX + pad);
-        maxY = Math.min(H - 1, maxY + pad);
-
-        const tw = maxX - minX + 1;
-        const th = maxY - minY + 1;
-        const out = document.createElement("canvas");
-        out.width = tw;
-        out.height = th;
-        const octx = out.getContext("2d")!;
-        octx.drawImage(canvas, minX, minY, tw, th, 0, 0, tw, th);
-
-        resolve({ dataUrl: out.toDataURL("image/png"), aspect: tw / th });
-      } catch {
-        resolve(null);
-      }
-    };
-    img.onerror = () => resolve(null);
-    img.src = srcDataUrl;
-  });
-}
-
-async function prepareLogoForWatermark(): Promise<{ dataUrl: string; aspect: number } | null> {
-  const raw = await fetchLogoDataUrl();
-  if (!raw) return null;
-  if (typeof document === "undefined") return null;
-  return processLogoForWatermark(raw);
-}
-
-export async function generatePDF(data: AssessmentData): Promise<jsPDF> {
-  const logoPrepared = await prepareLogoForWatermark();
+export function generatePDF(data: AssessmentData): jsPDF {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -696,29 +556,6 @@ export async function generatePDF(data: AssessmentData): Promise<jsPDF> {
     yLeft = chartCY + chartRY + chartDepth + 18;
   }
 
-  // ── Marca d'água: logo sem fundo + recorte automático (proporção real) ──
-  if (logoPrepared) {
-    try {
-      const { dataUrl: wmUrl, aspect } = logoPrepared;
-      const maxW = colLeftW * 0.82;
-      const maxH = 34;
-      let logoW = maxW;
-      let logoH = logoW / aspect;
-      if (logoH > maxH) {
-        logoH = maxH;
-        logoW = logoH * aspect;
-      }
-      const logoX = colLeftX + (colLeftW - logoW) / 2;
-      const logoY = yLeft + 3;
-      doc.saveGraphicsState();
-      doc.setGState(doc.GState({ opacity: 0.14 }));
-      doc.addImage(wmUrl, "PNG", logoX, logoY, logoW, logoH);
-      doc.restoreGraphicsState();
-    } catch {
-      // logo indisponível
-    }
-  }
-
   // Rodapé
   const footerY = pageHeight - 22;
 
@@ -744,15 +581,15 @@ export async function generatePDF(data: AssessmentData): Promise<jsPDF> {
   return doc;
 }
 
-export async function downloadPDF(data: AssessmentData): Promise<void> {
-  const doc = await generatePDF(data);
+export function downloadPDF(data: AssessmentData): void {
+  const doc = generatePDF(data);
   const fileName = `rfit_${data.cliente.nome.replace(/\s+/g, "_")}_${data.cliente.dataAvaliacao.replace(/\//g, "-")}.pdf`;
   doc.save(fileName);
 }
 
 /** Abre o PDF em nova aba para visualização (blob URL). Retorna false se o pop-up foi bloqueado. */
-export async function viewPDF(data: AssessmentData): Promise<boolean> {
-  const doc = await generatePDF(data);
+export function viewPDF(data: AssessmentData): boolean {
+  const doc = generatePDF(data);
   const blob = doc.output("blob");
   const url = URL.createObjectURL(blob);
   const win = window.open(url, "_blank", "noopener,noreferrer");
@@ -764,8 +601,8 @@ export async function viewPDF(data: AssessmentData): Promise<boolean> {
   return true;
 }
 
-export async function sharePDF(data: AssessmentData): Promise<void> {
-  const doc = await generatePDF(data);
+export function sharePDF(data: AssessmentData): void {
+  const doc = generatePDF(data);
   const pdfBlob = doc.output("blob");
 
   if (navigator.share && navigator.canShare) {
@@ -776,12 +613,12 @@ export async function sharePDF(data: AssessmentData): Promise<void> {
       text: `Avaliação Corporal de ${data.cliente.nome}`,
     }).catch(console.error);
   } else {
-    await downloadPDF(data);
+    downloadPDF(data);
   }
 }
 
-export async function printPDF(data: AssessmentData): Promise<void> {
-  const doc = await generatePDF(data);
+export function printPDF(data: AssessmentData): void {
+  const doc = generatePDF(data);
   const pdfDataUri = doc.output("datauristring");
   const printWindow = window.open(pdfDataUri);
   if (printWindow) {
