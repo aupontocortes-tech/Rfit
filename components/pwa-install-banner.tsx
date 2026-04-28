@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Download, Share2, X, Smartphone, Copy, Check } from "lucide-react";
+import { Download, Share2, X, Smartphone, Copy, Check, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -18,6 +18,11 @@ function isIOS(): boolean {
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
 
+function isMobileDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return isIOS() || /Android/i.test(navigator.userAgent);
+}
+
 function isStandalone(): boolean {
   if (typeof window === "undefined") return false;
   return (
@@ -32,6 +37,7 @@ export function PwaInstallBanner() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [copied, setCopied] = useState(false);
   const [showIosSteps, setShowIosSteps] = useState(false);
+  const [showDesktopSteps, setShowDesktopSteps] = useState(false);
   const [appUrl, setAppUrl] = useState("");
 
   useEffect(() => {
@@ -50,7 +56,7 @@ export function PwaInstallBanner() {
 
     if (isStandalone()) return;
 
-    setAppUrl(window.location.origin + window.location.pathname);
+    setAppUrl(window.location.href.split("#")[0]);
 
     setVisible(true);
 
@@ -84,7 +90,7 @@ export function PwaInstallBanner() {
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
-      toast.success("Link copiado. Cole no Safari ou Chrome do celular.");
+      toast.success("Link copiado. Cole no navegador do celular ou do computador.");
       setTimeout(() => setCopied(false), 2500);
     } catch {
       toast.error("Não foi possível copiar. Copie o endereço manualmente na barra do navegador.");
@@ -103,9 +109,22 @@ export function PwaInstallBanner() {
     setShowIosSteps((v) => !v);
   }, []);
 
+  const downloadDesktopShortcut = useCallback(() => {
+    const url = appUrl || (typeof window !== "undefined" ? window.location.href.split("#")[0] : "");
+    const ini = `[InternetShortcut]\r\nURL=${url}\r\n`;
+    const blob = new Blob([ini], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "RFIT.url";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast.success("Arquivo RFIT.url baixado. Coloque na Área de trabalho e abra para acessar o RFIT.");
+  }, [appUrl]);
+
   if (!mounted || !visible) return null;
 
   const ios = isIOS();
+  const mobile = isMobileDevice();
 
   return (
     <div
@@ -115,15 +134,19 @@ export function PwaInstallBanner() {
       <div className="max-w-6xl mx-auto flex flex-col gap-3">
         <div className="flex items-start gap-2">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Smartphone className="h-5 w-5" aria-hidden />
+            {mobile ? (
+              <Smartphone className="h-5 w-5" aria-hidden />
+            ) : (
+              <Monitor className="h-5 w-5" aria-hidden />
+            )}
           </div>
           <div className="min-w-0 flex-1 pt-0.5">
             <p className="text-sm font-semibold text-foreground leading-snug">
-              Use o RFIT como aplicativo no celular
+              Use o RFIT como aplicativo
             </p>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              Copie o link abaixo e cole no navegador do iPhone ou Android. Depois use o botão com o ícone
-              para instalar ou adicionar à tela inicial.
+              No <strong className="text-foreground">celular</strong>, copie o link ou instale pelo navegador.
+              No <strong className="text-foreground">computador</strong>, baixe o atalho (.url) ou instale pelo Chrome / Edge quando aparecer o ícone de instalação.
             </p>
           </div>
           <Button
@@ -158,7 +181,20 @@ export function PwaInstallBanner() {
               onClick={installAndroid}
             >
               <Download className="h-5 w-5" />
-              Baixar / instalar app
+              {mobile ? "Baixar / instalar app" : "Instalar no computador"}
+            </Button>
+          )}
+
+          {!mobile && (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="gap-2 min-h-11 touch-manipulation"
+              onClick={downloadDesktopShortcut}
+            >
+              <Download className="h-4 w-4" />
+              Baixar atalho (.url)
             </Button>
           )}
 
@@ -186,15 +222,19 @@ export function PwaInstallBanner() {
             <Button
               type="button"
               size="sm"
-              variant="secondary"
+              variant="outline"
               className="gap-2 min-h-11 touch-manipulation"
               onClick={() => {
-                copyLink();
-                toast.message("No Chrome: menu ⋮ → Instalar app ou Adicionar à tela inicial.");
+                if (mobile) {
+                  copyLink();
+                  toast.message("Chrome: menu ⋮ → Instalar app ou Adicionar à tela inicial.");
+                } else {
+                  setShowDesktopSteps((v) => !v);
+                }
               }}
             >
-              <Download className="h-5 w-5" />
-              Dica de instalação
+              <Download className="h-4 w-4" />
+              {mobile ? "Dica de instalação" : "Como instalar no PC"}
             </Button>
           )}
         </div>
@@ -205,6 +245,22 @@ export function PwaInstallBanner() {
             <li>Abra o <strong className="text-foreground">Safari</strong> e cole na barra de endereço.</li>
             <li>Toque em <strong className="text-foreground">Compartilhar</strong> e em <strong className="text-foreground">Adicionar à Tela de Início</strong>.</li>
             <li>Confirme — o ícone do RFIT aparecerá como um app.</li>
+          </ol>
+        )}
+
+        {showDesktopSteps && !ios && !mobile && (
+          <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside border border-border rounded-lg p-3 bg-muted/30">
+            <li>
+              Use <strong className="text-foreground">Baixar atalho (.url)</strong> e arraste o arquivo para a Área de trabalho (Windows).
+            </li>
+            <li>
+              No <strong className="text-foreground">Chrome</strong> ou <strong className="text-foreground">Edge</strong>, procure o ícone de{" "}
+              <strong className="text-foreground">instalar</strong> na barra de endereço (monitor + seta) e confirme.
+            </li>
+            <li>
+              Ou menu <strong className="text-foreground">⋮</strong> → <strong className="text-foreground">Instalar RFIT…</strong> /{" "}
+              <strong className="text-foreground">Aplicativos</strong> → <strong className="text-foreground">Instalar esta página como aplicativo</strong>.
+            </li>
           </ol>
         )}
 

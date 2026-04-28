@@ -97,7 +97,7 @@ export function ResultsDisplay({ resultados, cliente }: ResultsDisplayProps) {
 
       {/* 3D Pie Chart - Body Composition */}
       <div className="p-4 rounded-lg bg-card border border-border">
-        <h3 className="text-sm font-semibold text-foreground mb-4 text-center">Composicao Corporal</h3>
+        <h3 className="text-sm font-semibold text-foreground mb-4 text-center">Composição corporal (3D)</h3>
         <PieChart3D
           massaMagra={resultados.massaMagra}
           massaGorda={resultados.massaGorda}
