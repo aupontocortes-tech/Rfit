@@ -16,6 +16,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ResultsDisplay } from "@/components/body-assessment/results-display";
 import { ActionButtons } from "@/components/body-assessment/action-buttons";
 import type { AssessmentData, AvaliacaoResumo } from "@/lib/body-assessment-types";
+import {
+  getAvaliacaoLocal,
+  listResumosLocal,
+  syncFromServer,
+} from "@/lib/avaliacoes-store";
 
 export default function AvaliacoesSalvasPage() {
   const [lista, setLista] = useState<AvaliacaoResumo[]>([]);
@@ -29,10 +34,8 @@ export default function AvaliacoesSalvasPage() {
     setLoading(true);
     setErro(null);
     try {
-      const res = await fetch("/api/avaliacoes");
-      if (!res.ok) throw new Error("Falha ao carregar");
-      const data = (await res.json()) as AvaliacaoResumo[];
-      setLista(data);
+      await syncFromServer();
+      setLista(listResumosLocal());
     } catch {
       setErro("Não foi possível carregar as avaliações.");
     } finally {
@@ -49,6 +52,11 @@ export default function AvaliacoesSalvasPage() {
     setCarregandoDetalhe(true);
     setSelecionado(null);
     try {
+      const local = getAvaliacaoLocal(id);
+      if (local) {
+        setSelecionado(local);
+        return;
+      }
       const res = await fetch(`/api/avaliacoes/${id}`);
       if (!res.ok) throw new Error();
       const data = (await res.json()) as AssessmentData;

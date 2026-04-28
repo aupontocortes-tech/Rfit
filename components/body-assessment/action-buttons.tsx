@@ -5,6 +5,7 @@ import { Download, Share2, Printer, Save, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { downloadPDF, sharePDF, printPDF, viewPDF } from "@/lib/pdf-generator";
 import type { AssessmentData } from "@/lib/body-assessment-types";
+import { saveAvaliacaoLocal, setServerIdForLocalRow } from "@/lib/avaliacoes-store";
 import { toast } from "sonner";
 
 interface ActionButtonsProps {
@@ -37,16 +38,23 @@ export function ActionButtons({ data }: ActionButtonsProps) {
     if (!data.resultados) return;
     setSalvando(true);
     try {
-      const res = await fetch("/api/avaliacoes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const j = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(j.error ?? "Erro ao salvar");
+      const localId = saveAvaliacaoLocal(data);
+      try {
+        const res = await fetch("/api/avaliacoes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        if (res.ok) {
+          const j = (await res.json().catch(() => ({}))) as { id?: number };
+          if (typeof j.id === "number") setServerIdForLocalRow(localId, j.id);
+          toast.success("Avaliação salva neste aparelho e no servidor.");
+          return;
+        }
+      } catch {
+        /* rede / Vercel sem SQLite persistente */
       }
-      toast.success("Avaliação salva no banco de dados.");
+      toast.success("Avaliação salva neste aparelho.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível salvar.");
     } finally {
