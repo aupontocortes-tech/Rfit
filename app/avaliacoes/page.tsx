@@ -249,6 +249,46 @@ export default function AvaliacoesSalvasPage() {
               {baseRow?.data.cliente.dataAvaliacao}
               {baseRow?.data.cliente.avaliador ? ` · ${baseRow.data.cliente.avaliador}` : null}
             </SheetDescription>
+
+            {baseRow && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button size="sm" variant="destructive">
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Excluir
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir avaliação?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Isso vai remover a avaliação do SQLite (quando disponível) e do armazenamento local.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => excluirAvaliacao(baseRow)}
+                        className="bg-destructive text-white"
+                      >
+                        Excluir
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+
+                <Button size="sm" variant="outline" onClick={() => setEditRow(baseRow)}>
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Editar
+                </Button>
+
+                <Button size="sm" variant="secondary" onClick={() => setAddDialogOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar
+                </Button>
+              </div>
+            )}
           </SheetHeader>
 
           <ScrollArea className="flex-1 min-h-0">
@@ -265,7 +305,7 @@ export default function AvaliacoesSalvasPage() {
               {!carregandoDetalhe && comparacao.length > 0 && baseRow?.data.resultados && (
                 <div className="space-y-6">
                   <div className="flex items-start justify-between gap-4 flex-wrap">
-                    <div className="flex-1 min-w-[320px]">
+                    <div className="flex-1 min-w-0 sm:min-w-[320px]">
                       <ResultsDisplay resultados={baseRow.data.resultados} cliente={baseRow.data.cliente} />
                     </div>
                     <div className="w-full md:w-[360px]">

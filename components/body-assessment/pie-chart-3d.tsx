@@ -66,7 +66,7 @@ export function PieChart3D({ massaMagra, massaGorda, percentualGordura }: PieCha
       className="flex flex-col items-center gap-3 [perspective:900px]"
       style={{ perspectiveOrigin: "50% 40%" }}
     >
-      <div className="[transform-style:preserve-3d] [transform:rotateX(12deg)] w-full max-w-md">
+      <div className="[transform-style:preserve-3d] [transform:rotateX(12deg)] w-full max-w-[280px] sm:max-w-md">
         <svg width="100%" viewBox="0 0 320 248" className="drop-shadow-xl">
           <defs>
             <radialGradient id="gradMagraTop" cx="35%" cy="28%" r="65%">
