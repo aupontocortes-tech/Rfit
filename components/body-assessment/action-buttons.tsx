@@ -10,9 +10,10 @@ import { toast } from "sonner";
 
 interface ActionButtonsProps {
   data: AssessmentData;
+  showSave?: boolean;
 }
 
-export function ActionButtons({ data }: ActionButtonsProps) {
+export function ActionButtons({ data, showSave = true }: ActionButtonsProps) {
   const [salvando, setSalvando] = useState(false);
 
   const handleDownload = () => {
@@ -64,15 +65,17 @@ export function ActionButtons({ data }: ActionButtonsProps) {
 
   return (
     <div className="flex flex-wrap gap-3">
-      <Button
-        onClick={handleSalvar}
-        disabled={!data.resultados || salvando}
-        className="flex-1 min-w-[120px]"
-        variant="secondary"
-      >
-        <Save className="w-4 h-4 mr-2" />
-        {salvando ? "Salvando…" : "Salvar"}
-      </Button>
+      {showSave && (
+        <Button
+          onClick={handleSalvar}
+          disabled={!data.resultados || salvando}
+          className="flex-1 min-w-[120px]"
+          variant="secondary"
+        >
+          <Save className="w-4 h-4 mr-2" />
+          {salvando ? "Salvando…" : "Salvar"}
+        </Button>
+      )}
       <Button
         onClick={handleVisualizar}
         className="flex-1 min-w-[120px]"

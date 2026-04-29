@@ -54,6 +54,16 @@ export function getAvaliacaoLocal(id: number): AssessmentData | null {
   return row?.data ?? null;
 }
 
+export function getAvaliacaoStoredRow(id: number): AvaliacaoStoredRow | null {
+  const row = readAll().find((r) => r.id === id);
+  return row ?? null;
+}
+
+export function getServerIdForLocalRow(localId: number): number | null {
+  const row = readAll().find((r) => r.id === localId);
+  return row?.serverId ?? null;
+}
+
 /** Grava no aparelho e devolve o id local usado na lista */
 export function saveAvaliacaoLocal(data: AssessmentData): number {
   const rows = readAll();
@@ -65,6 +75,28 @@ export function saveAvaliacaoLocal(data: AssessmentData): number {
   });
   writeAll(rows);
   return id;
+}
+
+export function updateAvaliacaoLocal(localId: number, data: AssessmentData): boolean {
+  const rows = readAll();
+  const idx = rows.findIndex((r) => r.id === localId);
+  if (idx < 0) return false;
+  rows[idx] = {
+    ...rows[idx],
+    created_at: new Date().toISOString(),
+    data,
+  };
+  writeAll(rows);
+  return true;
+}
+
+export function deleteAvaliacaoLocal(localId: number): boolean {
+  const rows = readAll();
+  const before = rows.length;
+  const next = rows.filter((r) => r.id !== localId);
+  if (next.length === before) return false;
+  writeAll(next);
+  return true;
 }
 
 export function setServerIdForLocalRow(localId: number, serverId: number) {
