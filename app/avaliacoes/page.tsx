@@ -242,7 +242,7 @@ export default function AvaliacoesSalvasPage() {
       </div>
 
       <Sheet open={sheetAberto} onOpenChange={setSheetAberto}>
-        <SheetContent side="bottom" className="h-[90vh] flex flex-col p-0 gap-0 rounded-t-xl">
+        <SheetContent side="bottom" className="h-[85vh] sm:h-[90vh] flex flex-col p-0 gap-0 rounded-t-xl">
           <SheetHeader className="px-4 pt-4 pb-2 border-b border-border shrink-0 text-left">
             <SheetTitle>{baseRow?.data.cliente.nome ?? "Avaliações"}</SheetTitle>
             <SheetDescription>
@@ -347,12 +347,12 @@ export default function AvaliacoesSalvasPage() {
                   <div className="space-y-4">
                     <h3 className="text-sm font-semibold text-foreground">Números principais</h3>
                     <div className="overflow-x-auto">
-                      <table className="min-w-[980px] w-full text-sm">
+                      <table className="min-w-full sm:min-w-[980px] w-full text-sm">
                         <thead>
                           <tr className="text-xs text-muted-foreground bg-muted/30">
                             <th className="text-left px-3 py-2 font-medium">Métrica</th>
                             {headers.map((h) => (
-                              <th key={h.index} className="px-3 py-2 text-left font-medium whitespace-nowrap">
+                              <th key={h.index} className="px-3 py-2 text-left font-medium sm:whitespace-nowrap">
                                 {h.index} · {h.text}
                               </th>
                             ))}
@@ -363,7 +363,7 @@ export default function AvaliacoesSalvasPage() {
                             <tr key={String(f.key)} className="border-t border-border">
                               <td className="px-3 py-2 text-muted-foreground">{f.label}</td>
                               {comparacao.map((r) => (
-                                <td key={r.id} className="px-3 py-2 font-medium whitespace-nowrap">
+                                <td key={r.id} className="px-3 py-2 font-medium sm:whitespace-nowrap">
                                   {formatCell(r.data.resultados?.[f.key] as number | undefined, f.digits)}
                                 </td>
                               ))}
@@ -377,12 +377,12 @@ export default function AvaliacoesSalvasPage() {
                   <div className="space-y-4">
                     <h3 className="text-sm font-semibold text-foreground">Dobras cutâneas (mm)</h3>
                     <div className="overflow-x-auto">
-                      <table className="min-w-[980px] w-full text-sm">
+                      <table className="min-w-full sm:min-w-[980px] w-full text-sm">
                         <thead>
                           <tr className="text-xs text-muted-foreground bg-muted/30">
                             <th className="text-left px-3 py-2 font-medium">Dobra</th>
                             {headers.map((h) => (
-                              <th key={h.index} className="px-3 py-2 text-left font-medium whitespace-nowrap">
+                              <th key={h.index} className="px-3 py-2 text-left font-medium sm:whitespace-nowrap">
                                 {h.index} · {h.text}
                               </th>
                             ))}
@@ -393,7 +393,7 @@ export default function AvaliacoesSalvasPage() {
                             <tr key={String(f.key)} className="border-t border-border">
                               <td className="px-3 py-2 text-muted-foreground">{f.label}</td>
                               {comparacao.map((r) => (
-                                <td key={r.id} className="px-3 py-2 font-medium whitespace-nowrap">
+                                <td key={r.id} className="px-3 py-2 font-medium sm:whitespace-nowrap">
                                   {formatCell(r.data.dobras?.[f.key] as number | undefined, f.digits)}
                                 </td>
                               ))}
@@ -407,12 +407,12 @@ export default function AvaliacoesSalvasPage() {
                   <div className="space-y-4 pb-8">
                     <h3 className="text-sm font-semibold text-foreground">Medidas (cm)</h3>
                     <div className="overflow-x-auto">
-                      <table className="min-w-[980px] w-full text-sm">
+                      <table className="min-w-full sm:min-w-[980px] w-full text-sm">
                         <thead>
                           <tr className="text-xs text-muted-foreground bg-muted/30">
                             <th className="text-left px-3 py-2 font-medium">Medida</th>
                             {headers.map((h) => (
-                              <th key={h.index} className="px-3 py-2 text-left font-medium whitespace-nowrap">
+                              <th key={h.index} className="px-3 py-2 text-left font-medium sm:whitespace-nowrap">
                                 {h.index} · {h.text}
                               </th>
                             ))}
@@ -423,7 +423,7 @@ export default function AvaliacoesSalvasPage() {
                             <tr key={String(f.key)} className="border-t border-border">
                               <td className="px-3 py-2 text-muted-foreground">{f.label}</td>
                               {comparacao.map((r) => (
-                                <td key={r.id} className="px-3 py-2 font-medium whitespace-nowrap">
+                                <td key={r.id} className="px-3 py-2 font-medium sm:whitespace-nowrap">
                                   {formatCell(r.data.medidas?.[f.key] as number | undefined, f.digits)}
                                 </td>
                               ))}

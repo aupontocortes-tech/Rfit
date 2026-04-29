@@ -367,8 +367,8 @@ export function AssessmentUpsertDialog(props: Props) {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-w-[980px] p-0 overflow-hidden">
-        <div className="p-6 border-b border-border">
+      <DialogContent className="w-[95vw] sm:max-w-[980px] p-0 overflow-hidden max-h-[90vh]">
+        <div className="p-4 sm:p-6 border-b border-border">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {props.mode === "create" ? <Plus className="w-5 h-5" /> : <Pencil className="w-5 h-5" />}
@@ -382,7 +382,7 @@ export function AssessmentUpsertDialog(props: Props) {
           </DialogHeader>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6 overflow-y-auto">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
             <TabsList className="grid grid-cols-4">
               <TabsTrigger value="dados">Dados</TabsTrigger>
@@ -434,7 +434,7 @@ export function AssessmentUpsertDialog(props: Props) {
             <Button
               onClick={handleCalcular}
               disabled={calculando}
-              className="flex-1 min-w-[220px]"
+              className="flex-1 min-w-[160px] sm:min-w-[220px]"
               variant="outline"
             >
               {calculando ? (
@@ -453,7 +453,7 @@ export function AssessmentUpsertDialog(props: Props) {
             <Button
               onClick={handleSalvar}
               disabled={!resultados || salvando}
-              className="flex-1 min-w-[220px]"
+              className="flex-1 min-w-[160px] sm:min-w-[220px]"
             >
               <Save className="w-4 h-4 mr-2" />
               {salvando ? "Salvando…" : props.mode === "create" ? "Salvar e adicionar" : "Salvar alterações"}
