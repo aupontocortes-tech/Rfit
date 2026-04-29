@@ -242,7 +242,10 @@ export default function AvaliacoesSalvasPage() {
       </div>
 
       <Sheet open={sheetAberto} onOpenChange={setSheetAberto}>
-        <SheetContent side="bottom" className="h-[85vh] sm:h-[90vh] flex flex-col p-0 gap-0 rounded-t-xl">
+        <SheetContent
+          side="bottom"
+          className="w-full h-[85vh] sm:h-[90vh] flex flex-col p-0 gap-0 rounded-t-xl overflow-x-hidden"
+        >
           <SheetHeader className="px-4 pt-4 pb-2 border-b border-border shrink-0 text-left">
             <SheetTitle>{baseRow?.data.cliente.nome ?? "Avaliações"}</SheetTitle>
             <SheetDescription>
@@ -251,10 +254,10 @@ export default function AvaliacoesSalvasPage() {
             </SheetDescription>
 
             {baseRow && (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="mt-3 flex flex-col sm:flex-row gap-2 pr-10 w-full">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button size="sm" variant="destructive">
+                    <Button size="sm" variant="destructive" className="w-full sm:w-auto">
                       <Trash2 className="w-4 h-4 mr-2" />
                       Excluir
                     </Button>
@@ -278,12 +281,22 @@ export default function AvaliacoesSalvasPage() {
                   </AlertDialogContent>
                 </AlertDialog>
 
-                <Button size="sm" variant="outline" onClick={() => setEditRow(baseRow)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setEditRow(baseRow)}
+                  className="w-full sm:w-auto"
+                >
                   <Pencil className="w-4 h-4 mr-2" />
                   Editar
                 </Button>
 
-                <Button size="sm" variant="secondary" onClick={() => setAddDialogOpen(true)}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setAddDialogOpen(true)}
+                  className="w-full sm:w-auto"
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Adicionar
                 </Button>
